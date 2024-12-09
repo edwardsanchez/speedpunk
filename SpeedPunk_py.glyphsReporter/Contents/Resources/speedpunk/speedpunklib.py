@@ -390,7 +390,12 @@ class SpeedPunkLib(object):
 						numberofcurvesegments += 1
 		return numberofcurvesegments
 
-	def UpdateGlyph(self, g, glyphstring = None):
+	def UpdateGlyph(self, g, glyphstring = None, selected_segment=None):
+		if selected_segment:
+			prev_node, curr_node = selected_segment
+			self.gatherSelectedSegment(g, prev_node, curr_node)
+		else:
+			self.gatherSegments(g)
 
 		# Units per em
 		if environment == 'GlyphsApp':
@@ -433,6 +438,21 @@ class SpeedPunkLib(object):
 		# Reset
 		self.glyphchanged = False
 
+def gatherSelectedSegment(self, g, prev_node, curr_node):
+    """Gather only the segment between two selected nodes"""
+    self.curvesegments = []
+    self.glyphchanged = True
+    
+    # Get the handle points between the selected nodes
+    p1 = prev_node.position
+    p2 = prev_node.nextNode.position  # First handle
+    p3 = curr_node.prevNode.position  # Second handle
+    p4 = curr_node.position
+    
+    # Create single segment
+    self.curvesegments = [Segment(self, p1, p2, p3, p4)]
+    self.numberofcurvesegments = 1
+	
 	def iterateSegments(self):
 		for segment in self.curvesegments:
 			segment.DrawSegment()

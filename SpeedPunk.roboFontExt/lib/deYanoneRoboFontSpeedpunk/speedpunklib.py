@@ -389,53 +389,45 @@ class SpeedPunkLib:
 		self.curvesegments = oldSegments
 		self.glyphchanged = changed
 
-	def UpdateGlyph(self, g, glyphstring = None):
+		def gatherSelectedSegment(self, g, prev_node, curr_node):
+	"""Gather only the segment between two selected nodes"""
+	self.curvesegments = []
+	self.glyphchanged = True
+	
+	# Get the handle points between the selected nodes
+	p1 = Point(prev_node.x, prev_node.y)
+	p2 = Point(prev_node.nextNode.x, prev_node.nextNode.y)  # First handle
+	p3 = Point(curr_node.prevNode.x, curr_node.prevNode.y)  # Second handle
+	p4 = Point(curr_node.x, curr_node.y)
+	
+	# Create single segment
+	self.curvesegments = [Segment(self, p1, p2, p3, p4)]
+	self.numberofcurvesegments = 1
 
-		# Units per em
+	def UpdateGlyph(self, g, selected_segment=None):
+    # Update units per em
 		if environment == 'GlyphsApp':
 			self.unitsperem = g.parent.parent.upm
 		elif environment == 'RoboFont':
 			self.unitsperem = g.font.info.unitsPerEm
-
-		# Compare string to see if glyph changed
-		if (glyphstring and glyphstring != self.glyphstring) or not glyphstring:
-			if glyphstring:
-				self.glyphstring = glyphstring
-
-			# Number of curve segments, quick gathering
-			numberofcurvesegments = 0
-			if environment == 'GlyphsApp':
-				for p in g.paths:
-					for s in p.segments:
-						if len(s) == 4:
-							numberofcurvesegments += 1
-			elif environment == 'RoboFont':
-				for c in g:
-					for s in c:
-						if 'curve' in s.type:
-							numberofcurvesegments += 1
-			self.numberofcurvesegments = numberofcurvesegments
-
-
-			# Assign new segments
+		
+		# Gather only selected segments if provided
+		if selected_segment:
+			prev_node, curr_node = selected_segment
+			self.gatherSelectedSegment(g, prev_node, curr_node)
+		else:
 			self.gatherSegments(g)
 
-			# Things have actually changed
-			if self.glyphchanged:
-				self.values = []
+		# Things have actually changed
+		if self.glyphchanged:
+			self.values = []
+			for segment in self.curvesegments:
+				self.values.extend(segment.Values())
 
-				for segment in self.curvesegments:
-					self.values.extend(segment.Values())
-
-				# Glyph has outlines
-				if self.values:
-					self.vmin = min(self.values)
-					self.vmax = max(self.values)
-
-		# Draw
-#		context = NSGraphicsContext.currentContext()
-#		context.setCompositingOperation_(12)
-#		context.setShouldAntialias_(False)
+			# Glyph has outlines
+			if self.values:
+				self.vmin = min(self.values)
+				self.vmax = max(self.values)
 
 		if self.getPreference('useFader'):
 			self.buildHistogram(self.prefwindow.w.gradientImage.getNSImageView().frame().size[0])
