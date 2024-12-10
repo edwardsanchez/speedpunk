@@ -43,10 +43,10 @@ class GlyphsAppSpeedPunkReporter(ReporterPlugin):
 	def settings(self):
 		NSLog("SpeedPunk plugin is loading!")  # Add this line - should print when Glyphs starts
 		self.keyboardShortcut = 'x'
-
+		self.menuName = 'Speed Punk TEST'  # Changed from 'Speed Punk' to 'Speed Punk TEST'
+		
 		curveGain = speedpunk.speedpunklib.curveGain
 		self.loadNib('settingsView', __file__)
-		self.menuName = 'Speed Punk'
 		self.speedpunklib = speedpunk.speedpunklib.SpeedPunkLib()
 		self.speedpunklib.tool = self
 		self.generalContextMenus = [{'name': 'Speed Punk', 'view': self.settingsView}]

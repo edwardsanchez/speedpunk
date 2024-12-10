@@ -198,7 +198,7 @@ void InterpolateHexColorList(CGFloat colors[3][3], CGFloat p, CGFloat *R, CGFloa
 
 @interface SPSpeedPunk ()
 
-@property (nonatomic, strong) NSMutableArray <SPCurvature *> *segments;
+@property (nonatomic, strong) NSMutableArray<GSPathSegment *> *segments;
 @property (nonatomic, weak) GSLayer *lastLayer;
 @property (nonatomic) NSTimeInterval lastUpdate;
 @property (nonatomic) CGFloat unitsperem;
@@ -586,16 +586,45 @@ void InterpolateHexColorList(CGFloat colors[3][3], CGFloat p, CGFloat *R, CGFloa
 }
 
 - (void)drawBackgroundForLayer:(GSLayer*)layer options:(NSDictionary *)options {
-	// Whatever you draw here will be displayed BEHIND the paths.
-	if (!self.conditionsAreMetForDrawing) {
-		return;
-	}
-	[self updatePunk:layer];
-	for (GSPathSegment *segment in self.segments) {
-		for (SPCurvature *curvature in segment.objects) {
-			[curvature draw];
-		}
-	}
+    if (!self.conditionsAreMetForDrawing) {
+        return;
+    }
+    [self updatePunk:layer];
+    
+    // Convert selection to NSArray
+    NSArray *selection = layer.selection.array;
+    NSMutableArray<GSPathSegment *> *segmentsToDraw = [NSMutableArray array];
+    
+    // Check if exactly two nodes are selected
+    if (selection.count == 2 &&
+        [selection[0] isKindOfClass:[GSNode class]] &&
+        [selection[1] isKindOfClass:[GSNode class]]) {
+        
+        GSNode *selectedNode1 = selection[0];
+        GSNode *selectedNode2 = selection[1];
+        
+        for (GSPathSegment *segment in self.segments) {
+            NSPoint start = segment->elements[0];
+            NSPoint end   = segment->elements[segment->count - 1];
+            
+            BOOL matchesSelectedNodes =
+            ((NSEqualPoints(start, selectedNode1.position) && NSEqualPoints(end, selectedNode2.position)) ||
+             (NSEqualPoints(start, selectedNode2.position) && NSEqualPoints(end, selectedNode1.position)));
+            
+            if (matchesSelectedNodes) {
+                [segmentsToDraw addObject:segment];
+            }
+        }
+    } else {
+        // If not exactly two nodes are selected, draw all segments
+        [segmentsToDraw addObjectsFromArray:self.segments]; //Incompatible pointer types sending 'NSMutableArray<SPCurvature *> *' to parameter of type 'NSArray<GSPathSegment *> * _Nonnull'
+    }
+    
+    for (GSPathSegment *segment in segmentsToDraw) {
+        for (SPCurvature *curvature in segment.objects) {
+            [curvature draw];
+        }
+    }
 }
 
 - (IBAction)visitWebsite:(id)sender {
