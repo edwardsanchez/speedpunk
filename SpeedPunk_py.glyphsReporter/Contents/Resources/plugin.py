@@ -15,7 +15,7 @@ from GlyphsApp import *
 from GlyphsApp import NSStr
 from GlyphsApp.plugins import *
 from Foundation import NSString
-from AppKit import NSGraphicsContext, NSUserDefaultsController
+from AppKit import NSGraphicsContext, NSUserDefaultsController, NSLog
 
 import speedpunk.speedpunklib
 
@@ -41,6 +41,7 @@ class GlyphsAppSpeedPunkReporter(ReporterPlugin):
 	
 	@objc.python_method
 	def settings(self):
+		NSLog("SpeedPunk plugin is loading!")  # Add this line - should print when Glyphs starts
 		self.keyboardShortcut = 'x'
 
 		curveGain = speedpunk.speedpunklib.curveGain
@@ -81,9 +82,41 @@ class GlyphsAppSpeedPunkReporter(ReporterPlugin):
 	
 	@objc.python_method
 	def background(self, layer):
-		if self.conditionsAreMetForDrawing():
-			self.speedpunklib.UpdateGlyph(layer)
+		    NSColor.redColor().set()
+    NSBezierPath.fillRect_(((0, 0), (50, 50)))
 
+		# Try multiple logging approaches
+		print("SPEEDPUNK DEBUG: Running new version")
+		NSLog("SPEEDPUNK DEBUG: Running new version via NSLog")
+		import sys
+		sys.stderr.write("SPEEDPUNK DEBUG: Running new version via stderr\n")
+		
+		if self.conditionsAreMetForDrawing():
+			selected_nodes = []
+			for path in layer.paths:
+				for node in path.nodes:
+					if node.selected:
+						selected_nodes.append(node)
+			
+			print("SPEEDPUNK DEBUG: Found %d selected nodes" % len(selected_nodes))
+			
+			# Only proceed if we have 2 or more nodes selected
+			if len(selected_nodes) >= 2:
+				# Create a temporary layer with only the segments between selected nodes
+				temp_layer = GSLayer()
+				for path in layer.paths:
+					for i, node in enumerate(path.nodes):
+						if node.type == CURVE and node.selected:
+							# Check if previous node is also selected
+							prev_node = path.nodes[i-3]  # Get the previous on-curve point
+							if prev_node.selected:
+								# Include this segment in visualization
+								self.speedpunklib.UpdateGlyph(layer, selected_segment=(prev_node, node))
+			else:
+				# Clear any existing visualization
+				self.speedpunklib.curvesegments = []
+				self.speedpunklib.UpdateGlyph(layer)
+	
 	def drawForegroundWithOptions_(self, options):
 		if self.speedpunklib.useFader:
 			visibleRect = self.controller.viewPort
